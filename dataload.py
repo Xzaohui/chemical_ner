@@ -26,6 +26,12 @@ class data_loader(Dataset):
 #自动填充
 sent=pad_sequence([torch.LongTensor(i) for i in pre_data.sent_index], batch_first=True, padding_value=0)
 lab=pad_sequence([torch.LongTensor(i) for i in pre_data.lab_index], batch_first=True, padding_value=0)
-
+sent=sent.to("cuda")
+lab=lab.to("cuda")
 dataset=data_loader(sent,lab)
-dataloader=DataLoader(dataset,batch_size=2,shuffle=True ,num_workers = 0)
+dataloader=DataLoader(dataset,batch_size=1,shuffle=True ,num_workers = 0)
+
+# for i,(sent,lab) in enumerate(dataloader):
+#     print(sent)
+#     print(lab)
+#     break
