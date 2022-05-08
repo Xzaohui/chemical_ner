@@ -13,8 +13,8 @@ class Lstm_model(nn.Module):
     def __init__(self):
         super(Lstm_model,self).__init__()
         self.embedding = nn.Embedding(len(pre_data.dic),200)
-        self.lstm = nn.LSTM(200,256,2)
-        self.linear = nn.Linear(256,5)
+        self.lstm = nn.LSTM(200,32,2,bidirectional=True)
+        self.linear = nn.Linear(64,5)
         self.transitions=nn.Parameter(torch.empty(7,7))
         nn.init.uniform_(self.transitions, 0, 1) 
         self.transitions.data[:,pre_data.lab['start']]=-1000

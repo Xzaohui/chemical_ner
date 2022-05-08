@@ -1,11 +1,10 @@
 from pickletools import optimize
-import numpy as np
 import dataload
-import model_lstmcrf
+import model_bilstmcrf
 import torch
 import datetime
 
-model=model_lstmcrf.Lstm_model()
+model=model_bilstmcrf.Lstm_model()
 model.to("cuda")
 optimize=torch.optim.Adam(model.parameters(),lr=0.001)
 
@@ -24,5 +23,5 @@ for i in range(epoch):
             print(loss)
             print("epoch:",i,"step:",j)
             print("=================================================")
-torch.save(model.state_dict(), "./model/lstmcrf.pkl")
+torch.save(model.state_dict(), "./model/bilstmcrf.pkl") 
 

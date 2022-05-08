@@ -1,5 +1,8 @@
+from multiprocessing.dummy import Array
 import torch
 import torch.nn as nn
+import numpy as np
+import pre_data
 array=[[[ 0.0108, -0.0091,  0.0614,  0.0500, -0.0512],
          [ 0.0032, -0.0330,  0.0605,  0.0568, -0.0297],
          [-0.0085, -0.0170,  0.0735,  0.0553, -0.0402],
@@ -120,8 +123,5 @@ l=[[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
 
-#array转为tensor
-t1= torch.rand(7,7)
-t=t1[:,5]
-# t=torch.logsumexp(t,dim=1)
-print(t)
+dict={2:1,3:9,4:5}
+print(list(dict.keys())[list(dict.values()).index(1)])
