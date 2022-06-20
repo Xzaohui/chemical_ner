@@ -2,8 +2,9 @@ from transformers import BertForTokenClassification
 import torch
 import torch.nn as nn
 
-bert_path='./model/chemical-bert-uncased'
+bert_path='C:/Users/83912/Desktop/project/chemical_ner/model/chemical-bert-uncased'
 # model=BertForTokenClassification.from_pretrained(bert_path,num_labels=25)
+
 def argmax(vec,axis):
     # return the argmax as a python int
     _, idx = torch.max(vec, axis)
@@ -12,61 +13,79 @@ def max(vec,axis):
     # return the argmax as a python int
     max, _ = torch.max(vec, axis)
     return max
+def log_sum_exp(vec):
+    max_score = vec[0, argmax(vec,1).item()]
+    max_score_broadcast = max_score.view(1, -1).expand(1, vec.size()[1])
+    return max_score + torch.log(torch.sum(torch.exp(vec - max_score_broadcast)))
+
+def len_sent(attention_mask):
+    return torch.sum(attention_mask).item()
+
 class model_bertcrf(nn.Module):
     def __init__(self):
         super(model_bertcrf,self).__init__()
         self.bert=BertForTokenClassification.from_pretrained(bert_path,num_labels=27)
         self.transitions=nn.Parameter(torch.empty(27,27))
         nn.init.uniform_(self.transitions, 0, 1) 
-        self.transitions.data[:,25]=-1000
-        self.transitions.data[26,:]=-1000
-        self.transitions.data[25,26]=-1000
+        self.transitions.data[:,25]=-10000
+        self.transitions.data[26,:]=-10000
+        self.transitions.data[25,26]=-10000
     def likely_matrix(self,train_data,attention_mask):
         out=self.bert(train_data,attention_mask=attention_mask)
         return out.logits
     def score_sentence(self,lab,l_matrix,attention_mask):
-        score=l_matrix[torch.arange(1,dtype=torch.long),0,lab[:,0]] #第一个字的概率 batch_size
-        for i in range(1,len(lab[0])):
-            if attention_mask[0][i]==1:
-                score=score+self.transitions[lab[:,i-1],lab[:,i]]+l_matrix[torch.arange(1,dtype=torch.long),i,lab[:,i]] #batch_size
-        # score+=self.transitions[lab[:,i],26]
-        # score+=self.transitions[25,lab[:,0]]
+        l_matrix=l_matrix[0,1:len_sent(attention_mask)-1]
+        lab=lab[0,0:len_sent(attention_mask)-1]
+        score = torch.zeros(1).to('cuda')
+        for i in range(len(l_matrix)):
+            score=score+self.transitions[lab[i],lab[i+1]]+l_matrix[i,lab[i+1]] #batch_size
+        score+=self.transitions[lab[-1],26]
         return score
     def score_total(self,l_matrix,attention_mask):
-        score=torch.zeros_like(l_matrix[:,0])
-        tran=self.transitions
-        for i in range(1,len(l_matrix[0])):
-            if attention_mask[0][i]==1:
-                score=score.unsqueeze(2)+tran+l_matrix[:,i].unsqueeze(1)
-                score=torch.logsumexp(score,dim=1)
-        # start=torch.logsumexp(self.transitions[25,:],dim=0)
-        # end=torch.logsumexp(self.transitions[:,26],dim=0)
-        score=torch.logsumexp(score,dim=1)
-        return score
+        init_alphas = torch.full((1, 27), -10000.).to("cuda")
+        init_alphas[0][25] = 0.
+        l_matrix=l_matrix[0,0:len_sent(attention_mask)]
+        forward_var = init_alphas
+        for i in range(1,len(l_matrix)-1):
+            alphas_t = []
+            for next_tag in range(27):
+                emit_score = l_matrix[i][next_tag].view(
+                    1, -1).expand(1, 27)
+                trans_score = self.transitions[:,next_tag].view(1, -1)
+                next_tag_var = forward_var + trans_score + emit_score
+                alphas_t.append(log_sum_exp(next_tag_var).view(1))
+            forward_var = torch.cat(alphas_t).view(1, -1)
+        terminal_var = forward_var + self.transitions[:,26]
+        alpha = log_sum_exp(terminal_var)
+        return alpha
     def loss(self,sent,attention_mask,lab):
         l_matrix=self.likely_matrix(sent,attention_mask)
         score_sentence=self.score_sentence(lab,l_matrix, attention_mask)
         score_total=self.score_total(l_matrix,attention_mask)
         return score_total-score_sentence
     def viterbi_decode(self,l_matrix,attention_mask):
-        transitions=self.transitions
-        l_matrix=l_matrix[0]
-        t_score=torch.zeros_like(l_matrix)
-        t_score[0]=l_matrix[0]+transitions[25,0:27]
-        backpointers=torch.zeros_like(l_matrix,dtype=int)
-        for i in range(1,len(l_matrix)):
-            if i<len(l_matrix)-1 and attention_mask[0][i+1]==0:
-                break
-            
-            t=t_score[i-1].unsqueeze(1)+transitions
-            t_score[i]=max(t,axis=0)+l_matrix[i]
-            backpointers[i]=argmax(t,axis=0)
-                
-        t_score[-1]=t_score[-1]+transitions[:,26]
-        path_score=max(t_score[-1],0)
-        best_path=[argmax(t_score[-1],0)]
-        for i in range(len(t_score)-1,0,-1):
-            best_path.append(backpointers[i,best_path[-1]])
+        l_matrix=l_matrix[0,1:len_sent(attention_mask)-1]
+        backpointers = []
+        init_vvars = torch.full((1, 27), -10000.).to("cuda")
+        init_vvars[0][25] = 0
+        forward_var = init_vvars
+        for feat in l_matrix:
+            bptrs_t = []
+            viterbivars_t = []
+            for next_tag in range(27):
+                next_tag_var = forward_var + self.transitions[:,next_tag]
+                best_tag_id = argmax(next_tag_var,1)
+                bptrs_t.append(best_tag_id)
+                viterbivars_t.append(next_tag_var[0][best_tag_id].view(1))
+            forward_var = (torch.cat(viterbivars_t) + feat).view(1, -1)
+            backpointers.append(bptrs_t)
+        terminal_var = forward_var + self.transitions[:,26]
+        best_tag_id = argmax(terminal_var,1)
+        path_score = terminal_var[0][best_tag_id]
+        best_path = [best_tag_id]
+        for bptrs_t in reversed(backpointers):
+            best_tag_id = bptrs_t[best_tag_id]
+            best_path.append(best_tag_id)
         best_path.reverse()
         return path_score, best_path
     def forward(self,sent,attention_mask):
