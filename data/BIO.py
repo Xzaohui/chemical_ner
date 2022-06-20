@@ -62,8 +62,7 @@ class DataProcess:
 
     def tokenization(self,data):
 
-        c_ = data.replace(',', ' , ').replace('.', ' . ').replace('-', ' - ').replace('/', ' / ').replace(':', ' : ').replace(';', ' ; ').replace('@',' @ ')\
-            .replace('(', ' ').replace(')', ' ').replace("%"," % ").split( ' ')  # abstract (ab) 需要变成 abstract ab 吗？？
+        c_ = data.replace(',', ' , ').replace('.', ' . ').replace('-', ' - ').replace('/', ' / ').replace(':', ' : ').replace(';', ' ; ').replace('@',' @ ').replace('(', ' ').replace(')', ' ').replace("%"," % ").split( ' ')  # abstract (ab) 需要变成 abstract ab 吗？？
         c = [x.strip() for x in c_] # 去除单词首尾的空格
         c = list(filter(None, c))
         return c
@@ -78,8 +77,8 @@ def save_txt(word_cont):
     print('finsh saving')
 
 if __name__ == '__main__':
-    raw_data = "./4-our_last.jsonl"
-    out_data_path = "./save"
+    raw_data ='C:/Users/83912/Desktop/project/chemical_ner/data/4-our_last.jsonl'
+    out_data_path = "./"
     # 会生成train.txt及label.txt
     dataProcess = DataProcess(raw_data, out_data_path)
     save_txt(dataProcess.papers_word2lablel)
