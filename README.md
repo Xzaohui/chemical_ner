@@ -185,6 +185,11 @@ CRF的建模公式如下：
 
 ​我们当然是想让正确路径的概率越接近于1越好，因此可以令loss=-log(p(l|s)作为损失函数训练模型。
 
+### **Word2Vec**
+word2vec是Google研究团队里的Tomas Mikolov等人于2013年的《Distributed Representations ofWords and Phrases and their Compositionality》以及后续的《Efficient Estimation of Word Representations in Vector Space》两篇文章中提出的一种高效训练词向量的模型，基本出发点和Distributed representation类似:上下文相似的两个词，它们的词向量也应该相似，比如香蕉和梨在句子中可能经常出现在相同的上下文中，因此这两个词的表示向量应该就比较相似。
+
+我们选择由6000余篇相关领域的论文数据训练出Word2Vec预训练模型代替随机初始化的Embedding层，使得我们的词向量包含更大的信息量帮助我们的模型学习更深层次的信息。
+
 ## **其他训练算法**
 
 ### **Self-training&Co-training**
