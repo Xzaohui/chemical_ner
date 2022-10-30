@@ -30,3 +30,4 @@ model/t5-base/pytorch_model.bin filter=lfs diff=lfs merge=lfs -text
 model/t5-base/rust_model.ot filter=lfs diff=lfs merge=lfs -text
 model/bilstmcrf_negative.pkl filter=lfs diff=lfs merge=lfs -text
 model/bilstmcrf_normal.pkl filter=lfs diff=lfs merge=lfs -text
+model/bert-base-uncased/** filter=lfs diff=lfs merge=lfs -text
